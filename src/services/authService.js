@@ -1,5 +1,3 @@
-import usuariosData from '../data/usuarios.json';
-
 /**
  * Servicio de autenticación
  * NOTA EDUCATIVA: Este es un sistema de autenticación simplificado
@@ -8,6 +6,36 @@ import usuariosData from '../data/usuarios.json';
  * y conexión HTTPS.
  */
 class AuthService {
+  constructor() {
+    // Usuarios hardcodeados (sin archivo JSON)
+    this.usuarios = [
+      {
+        id: 1,
+        username: 'admin',
+        password: 'admin123',
+        nombre: 'Administrador',
+        rol: 'admin',
+        email: 'admin@techstore.com'
+      },
+      {
+        id: 2,
+        username: 'vendedor',
+        password: 'vendedor123',
+        nombre: 'Juan Pérez',
+        rol: 'vendedor',
+        email: 'vendedor@techstore.com'
+      },
+      {
+        id: 3,
+        username: 'demo',
+        password: 'demo123',
+        nombre: 'Usuario Demo',
+        rol: 'usuario',
+        email: 'demo@techstore.com'
+      }
+    ];
+  }
+
   /**
    * Validar credenciales de usuario
    * @param {string} username - Nombre de usuario
@@ -15,7 +43,7 @@ class AuthService {
    * @returns {Object|null} Usuario si las credenciales son correctas, null en caso contrario
    */
   login(username, password) {
-    const usuario = usuariosData.find(
+    const usuario = this.usuarios.find(
       user => user.username === username && user.password === password
     );
 
