@@ -1,0 +1,27 @@
+[
+  {
+    "id": 1,
+    "username": "admin",
+    "password": "admin123",
+    "nombre": "Administrador",
+    "rol": "admin",
+    "email": "admin@techstore.com"
+  },
+  {
+    "id": 2,
+    "username": "vendedor",
+    "password": "vendedor123",
+    "nombre": "Juan Pérez",
+    "rol": "vendedor",
+    "email": "vendedor@techstore.com"
+  },
+  {
+    "id": 3,
+    "username": "demo",
+    "password": "demo123",
+    "nombre": "Usuario Demo",
+    "rol": "usuario",
+    "email": "demo@techstore.com"
+  }
+]
+

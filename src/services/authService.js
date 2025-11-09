@@ -1,0 +1,66 @@
+import usuariosData from '../data/usuarios.json';
+
+/**
+ * Servicio de autenticación
+ * NOTA EDUCATIVA: Este es un sistema de autenticación simplificado
+ * para propósitos educativos. En producción, la autenticación debe
+ * manejarse desde el backend con tokens seguros (JWT), hash de contraseñas
+ * y conexión HTTPS.
+ */
+class AuthService {
+  /**
+   * Validar credenciales de usuario
+   * @param {string} username - Nombre de usuario
+   * @param {string} password - Contraseña
+   * @returns {Object|null} Usuario si las credenciales son correctas, null en caso contrario
+   */
+  login(username, password) {
+    const usuario = usuariosData.find(
+      user => user.username === username && user.password === password
+    );
+
+    if (usuario) {
+      // Guardar sesión en localStorage (solo para demo)
+      const { password, ...userWithoutPassword } = usuario;
+      localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
+      return userWithoutPassword;
+    }
+
+    return null;
+  }
+
+  /**
+   * Cerrar sesión del usuario actual
+   */
+  logout() {
+    localStorage.removeItem('currentUser');
+  }
+
+  /**
+   * Obtener el usuario actual de la sesión
+   * @returns {Object|null} Usuario actual o null
+   */
+  getCurrentUser() {
+    const userStr = localStorage.getItem('currentUser');
+    if (userStr) {
+      try {
+        return JSON.parse(userStr);
+      } catch (error) {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Verificar si hay un usuario autenticado
+   * @returns {boolean} true si hay sesión activa
+   */
+  isAuthenticated() {
+    return this.getCurrentUser() !== null;
+  }
+}
+
+// Exportar instancia única
+export default new AuthService();
+
