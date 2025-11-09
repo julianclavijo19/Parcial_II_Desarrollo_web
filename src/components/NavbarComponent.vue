@@ -1,60 +1,36 @@
 <template>
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+  <nav class="navbar-minimal">
     <div class="container-fluid">
-      <a class="navbar-brand d-flex align-items-center" href="#">
-        <i class="bi bi-cpu me-2 fs-4"></i>
-        <span class="fw-bold">TechStore Pro</span>
-      </a>
-      
-      <button 
-        class="navbar-toggler" 
-        type="button" 
-        data-bs-toggle="collapse" 
-        data-bs-target="#navbarContent"
-      >
-        <span class="navbar-toggler-icon"></span>
-      </button>
+      <div class="navbar-brand">
+        <i class="bi bi-controller"></i>
+        <span>GamerHub Pro</span>
+      </div>
 
-      <div class="collapse navbar-collapse" id="navbarContent">
-        <ul class="navbar-nav ms-auto align-items-center">
-          <li class="nav-item dropdown" v-if="currentUser">
-            <a 
-              class="nav-link dropdown-toggle d-flex align-items-center" 
-              href="#" 
-              role="button" 
-              data-bs-toggle="dropdown"
-            >
-              <i class="bi bi-person-circle me-2 fs-5"></i>
-              <span>{{ currentUser.nombre }}</span>
-            </a>
-            <ul class="dropdown-menu dropdown-menu-end">
-              <li>
-                <a class="dropdown-item" href="#">
-                  <i class="bi bi-gear me-2"></i>Configuración
-                </a>
-              </li>
-              <li>
-                <a class="dropdown-item" href="#">
-                  <i class="bi bi-person me-2"></i>Mi Perfil
-                </a>
-              </li>
-              <li><hr class="dropdown-divider"></li>
-              <li>
-                <a class="dropdown-item text-danger" href="#" @click.prevent="handleLogout">
-                  <i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión
-                </a>
-              </li>
-            </ul>
-          </li>
-        </ul>
+      <div class="navbar-actions">
+        <div class="user-menu" v-if="currentUser">
+          <button class="user-btn" @click="toggleMenu">
+            <i class="bi bi-person-circle"></i>
+            <span class="user-name">{{ currentUser.nombre }}</span>
+            <i class="bi bi-chevron-down"></i>
+          </button>
+          
+          <div class="user-dropdown" v-show="showMenu">
+            <div class="dropdown-header">
+              <p class="user-email">{{ currentUser.email }}</p>
+              <span class="user-role">{{ currentUser.rol }}</span>
+            </div>
+            <button class="dropdown-item" @click="handleLogout">
+              <i class="bi bi-box-arrow-right"></i>
+              Cerrar Sesión
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </nav>
 </template>
 
 <script>
-import authService from '../services/authService';
-
 export default {
   name: 'NavbarComponent',
   props: {
@@ -63,9 +39,18 @@ export default {
       default: null
     }
   },
+  data() {
+    return {
+      showMenu: false
+    };
+  },
   emits: ['logout'],
   methods: {
+    toggleMenu() {
+      this.showMenu = !this.showMenu;
+    },
     handleLogout() {
+      this.showMenu = false;
       this.$emit('logout');
     }
   }
@@ -73,35 +58,147 @@ export default {
 </script>
 
 <style scoped>
-.navbar {
-  border-bottom: 3px solid #0056b3;
+.navbar-minimal {
+  background: #000000;
+  border-bottom: 1px solid #1a1a1a;
+  padding: 0.75rem 2rem;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: 60px;
+}
+
+.container-fluid {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 100%;
+  padding: 0;
 }
 
 .navbar-brand {
-  font-size: 1.5rem;
-  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .navbar-brand i {
-  color: #ffc107;
+  font-size: 1.5rem;
+  color: #00ff88;
 }
 
-.nav-link {
-  transition: all 0.3s ease;
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
-.nav-link:hover {
-  color: #ffc107 !important;
+.user-menu {
+  position: relative;
+}
+
+.user-btn {
+  background: transparent;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.user-btn:hover {
+  background: #1a1a1a;
+  border-color: #00ff88;
+}
+
+.user-btn i.bi-person-circle {
+  font-size: 1.25rem;
+}
+
+.user-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.user-btn i.bi-chevron-down {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.user-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  min-width: 220px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+
+.dropdown-header {
+  padding: 1rem;
+  border-bottom: 1px solid #333;
+}
+
+.user-email {
+  color: #fff;
+  font-size: 0.875rem;
+  margin: 0 0 0.25rem 0;
+}
+
+.user-role {
+  background: #00ff88;
+  color: #000;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.dropdown-item {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0.75rem 1rem;
+  color: #fff;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.875rem;
 }
 
 .dropdown-item:hover {
-  background-color: #0d6efd;
-  color: white;
+  background: #00ff88;
+  color: #000;
 }
 
-.dropdown-item.text-danger:hover {
-  background-color: #dc3545;
-  color: white !important;
+.dropdown-item i {
+  font-size: 1rem;
+}
+
+@media (max-width: 768px) {
+  .navbar-minimal {
+    padding: 0.75rem 1rem;
+  }
+  
+  .user-name {
+    display: none;
+  }
 }
 </style>
-

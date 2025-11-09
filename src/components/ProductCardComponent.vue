@@ -1,70 +1,39 @@
 <template>
-  <div class="card product-card h-100 shadow-sm">
-    <div class="card-img-container">
+  <div class="product-card-minimal">
+    <div class="product-image">
       <img 
-        :src="product.image" 
+        :src="product.thumbnail || product.image" 
         :alt="product.title" 
-        class="card-img-top"
         @error="handleImageError"
       >
-      <div class="product-badge">
-        <span class="badge bg-primary">{{ product.category }}</span>
+      <span class="product-category">{{ product.category }}</span>
+    </div>
+
+    <div class="product-info">
+      <h3 class="product-title">{{ truncatedTitle }}</h3>
+      <p class="product-price">${{ product.price }}</p>
+      
+      <div class="product-meta">
+        <div class="rating" v-if="product.rating">
+          <i class="bi bi-star-fill"></i>
+          <span>{{ product.rating }}</span>
+        </div>
+        <span class="stock" :class="stockClass">
+          {{ product.stock ? `Stock: ${product.stock}` : 'Disponible' }}
+        </span>
       </div>
     </div>
 
-    <div class="card-body d-flex flex-column">
-      <h5 class="card-title text-truncate" :title="product.title">
-        {{ product.title }}
-      </h5>
-      
-      <p class="card-text text-muted small flex-grow-1">
-        {{ truncatedDescription }}
-      </p>
-
-      <div class="rating mb-2">
-        <i 
-          v-for="star in 5" 
-          :key="star"
-          class="bi"
-          :class="star <= Math.round(product.rating?.rate || 0) ? 'bi-star-fill text-warning' : 'bi-star text-muted'"
-        ></i>
-        <span class="text-muted ms-2 small">
-          ({{ product.rating?.count || 0 }} reseñas)
-        </span>
-      </div>
-
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <span class="price text-primary fw-bold fs-4">
-          ${{ formatPrice(product.price) }}
-        </span>
-        <span class="text-muted small">
-          ID: #{{ product.id }}
-        </span>
-      </div>
-
-      <div class="btn-group w-100" role="group">
-        <button 
-          class="btn btn-outline-primary btn-sm"
-          @click="$emit('view', product)"
-          title="Ver detalles"
-        >
-          <i class="bi bi-eye"></i>
-        </button>
-        <button 
-          class="btn btn-outline-success btn-sm"
-          @click="$emit('edit', product)"
-          title="Editar"
-        >
-          <i class="bi bi-pencil"></i>
-        </button>
-        <button 
-          class="btn btn-outline-danger btn-sm"
-          @click="$emit('delete', product)"
-          title="Eliminar"
-        >
-          <i class="bi bi-trash"></i>
-        </button>
-      </div>
+    <div class="product-actions">
+      <button class="action-btn" @click="$emit('view', product)" title="Ver">
+        <i class="bi bi-eye"></i>
+      </button>
+      <button class="action-btn" @click="$emit('edit', product)" title="Editar">
+        <i class="bi bi-pencil"></i>
+      </button>
+      <button class="action-btn danger" @click="$emit('delete', product)" title="Eliminar">
+        <i class="bi bi-trash"></i>
+      </button>
     </div>
   </div>
 </template>
@@ -80,106 +49,158 @@ export default {
   },
   emits: ['view', 'edit', 'delete'],
   computed: {
-    truncatedDescription() {
-      const maxLength = 100;
-      if (!this.product.description) return '';
+    truncatedTitle() {
+      const maxLength = 50;
+      if (!this.product.title) return '';
       
-      return this.product.description.length > maxLength
-        ? this.product.description.substring(0, maxLength) + '...'
-        : this.product.description;
+      return this.product.title.length > maxLength
+        ? this.product.title.substring(0, maxLength) + '...'
+        : this.product.title;
+    },
+    stockClass() {
+      if (!this.product.stock) return '';
+      return this.product.stock > 10 ? 'in-stock' : 'low-stock';
     }
   },
   methods: {
-    formatPrice(price) {
-      return Number(price).toFixed(2);
-    },
     handleImageError(event) {
-      event.target.src = 'https://via.placeholder.com/300x300?text=Sin+Imagen';
+      event.target.src = 'https://via.placeholder.com/300x300/000000/00ff88?text=Sin+Imagen';
     }
   }
 }
 </script>
 
 <style scoped>
-.product-card {
-  transition: all 0.3s ease;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
+.product-card-minimal {
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  border-radius: 12px;
   overflow: hidden;
+  transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
 }
 
-.product-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 16px rgba(0,0,0,0.15) !important;
-  border-color: #0d6efd;
+.product-card-minimal:hover {
+  border-color: #00ff88;
+  transform: translateY(-4px);
 }
 
-.card-img-container {
+.product-image {
   position: relative;
-  height: 250px;
-  background-color: #f8f9fa;
+  width: 100%;
+  height: 200px;
+  background: #000;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 15px;
-}
-
-.card-img-top {
-  max-height: 100%;
-  max-width: 100%;
-  object-fit: contain;
-}
-
-.product-badge {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-}
-
-.product-badge .badge {
-  text-transform: capitalize;
-  font-size: 0.7rem;
-  padding: 5px 10px;
-}
-
-.card-title {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #212529;
-  margin-bottom: 10px;
-  min-height: 2.5rem;
-}
-
-.card-text {
-  font-size: 0.85rem;
-  line-height: 1.4;
-  min-height: 3rem;
   overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
+}
+
+.product-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-category {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: rgba(0, 255, 136, 0.9);
+  color: #000;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.product-info {
+  padding: 1rem;
+  flex: 1;
+}
+
+.product-title {
+  color: #fff;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  min-height: 2.5rem;
+  line-height: 1.3;
+}
+
+.product-price {
+  color: #00ff88;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.75rem 0;
+}
+
+.product-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 .rating {
-  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: #ffc107;
+  font-size: 0.875rem;
 }
 
-.price {
-  font-size: 1.5rem !important;
-}
-
-.btn-group .btn {
-  flex: 1;
-  transition: all 0.2s ease;
-}
-
-.btn-group .btn:hover {
-  transform: scale(1.05);
-}
-
-.btn i {
+.rating i {
   font-size: 1rem;
 }
-</style>
 
+.stock {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.stock.in-stock {
+  background: rgba(0, 255, 136, 0.1);
+  color: #00ff88;
+}
+
+.stock.low-stock {
+  background: rgba(255, 193, 7, 0.1);
+  color: #ffc107;
+}
+
+.product-actions {
+  display: flex;
+  border-top: 1px solid #1a1a1a;
+}
+
+.action-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-right: 1px solid #1a1a1a;
+  padding: 0.75rem;
+  color: #999;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 1rem;
+}
+
+.action-btn:last-child {
+  border-right: none;
+}
+
+.action-btn:hover {
+  background: #1a1a1a;
+  color: #00ff88;
+}
+
+.action-btn.danger:hover {
+  background: #dc3545;
+  color: #fff;
+}
+</style>

@@ -1,15 +1,12 @@
 <template>
-  <div class="dashboard-container">
+  <div class="dashboard-minimal">
     <NavbarComponent :currentUser="currentUser" @logout="handleLogout" />
+    <SidebarComponent :currentUser="currentUser" />
     
-    <div class="main-container">
-      <SidebarComponent :currentUser="currentUser" />
-      
-      <main class="content-area">
-        <router-view></router-view>
-        <FooterComponent />
-      </main>
-    </div>
+    <main class="main-content">
+      <router-view></router-view>
+      <FooterComponent />
+    </main>
   </div>
 </template>
 
@@ -34,7 +31,6 @@ export default {
   mounted() {
     this.currentUser = authService.getCurrentUser();
     
-    // Si no está autenticado, redirigir al login
     if (!this.currentUser) {
       this.$router.push('/login');
     }
@@ -49,31 +45,24 @@ export default {
 </script>
 
 <style scoped>
-.dashboard-container {
+.dashboard-minimal {
   min-height: 100vh;
+  background: #000000;
   display: flex;
   flex-direction: column;
 }
 
-.main-container {
-  display: flex;
-  flex: 1;
-  padding-top: 56px; /* Altura del navbar */
-}
-
-.content-area {
-  flex: 1;
-  margin-left: 250px; /* Ancho del sidebar */
-  background-color: #f8f9fa;
+.main-content {
+  margin-left: 240px;
+  margin-top: 60px;
+  min-height: calc(100vh - 60px);
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 56px);
 }
 
 @media (max-width: 768px) {
-  .content-area {
+  .main-content {
     margin-left: 0;
   }
 }
 </style>
-

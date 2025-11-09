@@ -1,11 +1,11 @@
 import axios from 'axios';
 
-// URL base de la API externa (FakeStore API)
-const API_BASE_URL = 'https://fakestoreapi.com';
+// URL base de la API externa (DummyJSON)
+const API_BASE_URL = 'https://dummyjson.com';
 
 /**
  * Servicio para gestionar operaciones CRUD de productos
- * usando la API externa FakeStore API
+ * usando la API externa DummyJSON
  */
 class ProductService {
   /**
@@ -14,8 +14,8 @@ class ProductService {
    */
   async getAllProducts() {
     try {
-      const response = await axios.get(`${API_BASE_URL}/products`);
-      return response.data;
+      const response = await axios.get(`${API_BASE_URL}/products?limit=100`);
+      return response.data.products;
     } catch (error) {
       console.error('Error al obtener productos:', error);
       throw error;
@@ -45,7 +45,7 @@ class ProductService {
   async getProductsByCategory(category) {
     try {
       const response = await axios.get(`${API_BASE_URL}/products/category/${category}`);
-      return response.data;
+      return response.data.products;
     } catch (error) {
       console.error(`Error al obtener productos de categoría ${category}:`, error);
       throw error;
@@ -68,13 +68,13 @@ class ProductService {
 
   /**
    * Crear un nuevo producto
-   * NOTA: FakeStore API simula la creación pero no persiste los datos
+   * NOTA: DummyJSON API simula la creación pero no persiste los datos
    * @param {Object} product - Datos del producto
    * @returns {Promise} Producto creado
    */
   async createProduct(product) {
     try {
-      const response = await axios.post(`${API_BASE_URL}/products`, product);
+      const response = await axios.post(`${API_BASE_URL}/products/add`, product);
       return response.data;
     } catch (error) {
       console.error('Error al crear producto:', error);
@@ -84,7 +84,7 @@ class ProductService {
 
   /**
    * Actualizar un producto existente
-   * NOTA: FakeStore API simula la actualización pero no persiste los datos
+   * NOTA: DummyJSON API simula la actualización pero no persiste los datos
    * @param {number} id - ID del producto
    * @param {Object} product - Datos actualizados del producto
    * @returns {Promise} Producto actualizado
@@ -101,7 +101,7 @@ class ProductService {
 
   /**
    * Eliminar un producto
-   * NOTA: FakeStore API simula la eliminación pero no persiste los cambios
+   * NOTA: DummyJSON API simula la eliminación pero no persiste los cambios
    * @param {number} id - ID del producto
    * @returns {Promise} Producto eliminado
    */
@@ -123,9 +123,24 @@ class ProductService {
   async getLimitedProducts(limit = 10) {
     try {
       const response = await axios.get(`${API_BASE_URL}/products?limit=${limit}`);
-      return response.data;
+      return response.data.products;
     } catch (error) {
       console.error('Error al obtener productos limitados:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Buscar productos
+   * @param {string} query - Término de búsqueda
+   * @returns {Promise} Lista de productos encontrados
+   */
+  async searchProducts(query) {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/products/search?q=${query}`);
+      return response.data.products;
+    } catch (error) {
+      console.error('Error al buscar productos:', error);
       throw error;
     }
   }

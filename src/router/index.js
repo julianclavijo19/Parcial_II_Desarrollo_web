@@ -105,7 +105,7 @@ router.beforeEach((to, from, next) => {
   const isAuthenticated = authService.isAuthenticated();
 
   // Actualizar título de la página
-  document.title = `TechStore Pro - ${to.meta.title || 'Dashboard'}`;
+  document.title = `GamerHub Pro - ${to.meta.title || 'Dashboard'}`;
 
   if (requiresAuth && !isAuthenticated) {
     // Redirigir al login si la ruta requiere autenticación y no está autenticado

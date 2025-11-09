@@ -1,159 +1,102 @@
 <template>
-  <div class="home-view p-4">
-    <div class="welcome-section mb-4">
-      <h1 class="display-4 fw-bold text-primary">
-        <i class="bi bi-house-door me-3"></i>
-        ¡Bienvenido, {{ currentUser?.nombre }}!
-      </h1>
-      <p class="lead text-muted">Panel de control de TechStore Pro</p>
+  <div class="home-minimal">
+    <div class="page-header">
+      <div>
+        <h1>Dashboard</h1>
+        <p>Bienvenido, {{ currentUser?.nombre }}</p>
+      </div>
     </div>
 
-    <!-- Tarjetas de estadísticas -->
-    <div class="row g-4 mb-4">
-      <div class="col-md-3">
-        <div class="stat-card bg-primary text-white">
-          <div class="stat-icon">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon products">
+          <i class="bi bi-box-seam"></i>
+        </div>
+        <div class="stat-info">
+          <h3>{{ stats.totalProducts }}</h3>
+          <p>Productos</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon categories">
+          <i class="bi bi-tags"></i>
+        </div>
+        <div class="stat-info">
+          <h3>{{ stats.categories }}</h3>
+          <p>Categorías</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon clients">
+          <i class="bi bi-people"></i>
+        </div>
+        <div class="stat-info">
+          <h3>{{ stats.clients }}</h3>
+          <p>Clientes</p>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon revenue">
+          <i class="bi bi-graph-up"></i>
+        </div>
+        <div class="stat-info">
+          <h3>${{ stats.revenue }}</h3>
+          <p>Ventas del Mes</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-grid">
+      <div class="card">
+        <div class="card-header">
+          <h2>Accesos Rápidos</h2>
+        </div>
+        <div class="card-body">
+          <router-link to="/dashboard/productos" class="quick-action">
             <i class="bi bi-box-seam"></i>
-          </div>
-          <div class="stat-content">
-            <h3 class="mb-0">{{ stats.totalProducts }}</h3>
-            <p class="mb-0">Productos</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-3">
-        <div class="stat-card bg-success text-white">
-          <div class="stat-icon">
+            <span>Gestionar Productos</span>
+            <i class="bi bi-arrow-right"></i>
+          </router-link>
+          <router-link to="/dashboard/categorias" class="quick-action">
             <i class="bi bi-tags"></i>
-          </div>
-          <div class="stat-content">
-            <h3 class="mb-0">{{ stats.categories }}</h3>
-            <p class="mb-0">Categorías</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-3">
-        <div class="stat-card bg-warning text-white">
-          <div class="stat-icon">
+            <span>Ver Categorías</span>
+            <i class="bi bi-arrow-right"></i>
+          </router-link>
+          <router-link to="/dashboard/clientes" class="quick-action">
             <i class="bi bi-people"></i>
-          </div>
-          <div class="stat-content">
-            <h3 class="mb-0">{{ stats.clients }}</h3>
-            <p class="mb-0">Clientes</p>
-          </div>
+            <span>Administrar Clientes</span>
+            <i class="bi bi-arrow-right"></i>
+          </router-link>
         </div>
       </div>
 
-      <div class="col-md-3">
-        <div class="stat-card bg-info text-white">
-          <div class="stat-icon">
-            <i class="bi bi-graph-up"></i>
-          </div>
-          <div class="stat-content">
-            <h3 class="mb-0">${{ stats.revenue }}</h3>
-            <p class="mb-0">Ventas del Mes</p>
-          </div>
+      <div class="card">
+        <div class="card-header">
+          <h2>Información del Sistema</h2>
         </div>
-      </div>
-    </div>
-
-    <!-- Sección de accesos rápidos -->
-    <div class="row g-4 mb-4">
-      <div class="col-md-6">
-        <div class="card shadow-sm">
-          <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">
-              <i class="bi bi-lightning me-2"></i>
-              Accesos Rápidos
-            </h5>
+        <div class="card-body">
+          <div class="info-row">
+            <span class="info-label">Usuario:</span>
+            <span class="info-value">{{ currentUser?.username }}</span>
           </div>
-          <div class="card-body">
-            <div class="d-grid gap-2">
-              <router-link to="/dashboard/productos" class="btn btn-outline-primary">
-                <i class="bi bi-box-seam me-2"></i>
-                Gestionar Productos
-              </router-link>
-              <button class="btn btn-outline-success">
-                <i class="bi bi-plus-circle me-2"></i>
-                Nuevo Producto
-              </button>
-              <button class="btn btn-outline-info">
-                <i class="bi bi-file-earmark-text me-2"></i>
-                Ver Reportes
-              </button>
-            </div>
+          <div class="info-row">
+            <span class="info-label">Email:</span>
+            <span class="info-value">{{ currentUser?.email }}</span>
           </div>
-        </div>
-      </div>
-
-      <div class="col-md-6">
-        <div class="card shadow-sm">
-          <div class="card-header bg-success text-white">
-            <h5 class="mb-0">
-              <i class="bi bi-activity me-2"></i>
-              Actividad Reciente
-            </h5>
+          <div class="info-row">
+            <span class="info-label">Rol:</span>
+            <span class="info-badge">{{ currentUser?.rol }}</span>
           </div>
-          <div class="card-body">
-            <ul class="list-unstyled mb-0">
-              <li class="mb-2 pb-2 border-bottom">
-                <i class="bi bi-check-circle text-success me-2"></i>
-                Producto "Laptop Dell" actualizado
-                <small class="text-muted d-block">Hace 5 minutos</small>
-              </li>
-              <li class="mb-2 pb-2 border-bottom">
-                <i class="bi bi-plus-circle text-primary me-2"></i>
-                Nuevo producto "iPhone 14" agregado
-                <small class="text-muted d-block">Hace 1 hora</small>
-              </li>
-              <li class="mb-2">
-                <i class="bi bi-trash text-danger me-2"></i>
-                Producto "Mouse Viejo" eliminado
-                <small class="text-muted d-block">Hace 2 horas</small>
-              </li>
-            </ul>
+          <div class="info-row">
+            <span class="info-label">API:</span>
+            <span class="info-value">DummyJSON</span>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Gráfico de información -->
-    <div class="row">
-      <div class="col-12">
-        <div class="card shadow-sm">
-          <div class="card-header bg-dark text-white">
-            <h5 class="mb-0">
-              <i class="bi bi-bar-chart me-2"></i>
-              Información del Sistema
-            </h5>
-          </div>
-          <div class="card-body">
-            <div class="row">
-              <div class="col-md-6">
-                <h6 class="fw-bold">Perfil de Usuario</h6>
-                <ul class="list-unstyled">
-                  <li><strong>Nombre:</strong> {{ currentUser?.nombre }}</li>
-                  <li><strong>Usuario:</strong> {{ currentUser?.username }}</li>
-                  <li><strong>Email:</strong> {{ currentUser?.email }}</li>
-                  <li><strong>Rol:</strong> 
-                    <span class="badge bg-primary">{{ currentUser?.rol }}</span>
-                  </li>
-                </ul>
-              </div>
-              <div class="col-md-6">
-                <h6 class="fw-bold">Información del Sistema</h6>
-                <ul class="list-unstyled">
-                  <li><strong>Versión:</strong> 1.0.0</li>
-                  <li><strong>Última actualización:</strong> {{ lastUpdate }}</li>
-                  <li><strong>Estado:</strong> 
-                    <span class="badge bg-success">Operativo</span>
-                  </li>
-                  <li><strong>API:</strong> FakeStore API</li>
-                </ul>
-              </div>
-            </div>
+          <div class="info-row">
+            <span class="info-label">Estado:</span>
+            <span class="status-badge active">Operativo</span>
           </div>
         </div>
       </div>
@@ -170,16 +113,11 @@ export default {
     return {
       currentUser: null,
       stats: {
-        totalProducts: 20,
-        categories: 4,
-        clients: 150,
-        revenue: '45,320'
-      },
-      lastUpdate: new Date().toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
+        totalProducts: 100,
+        categories: 5,
+        clients: 250,
+        revenue: '128,450'
+      }
     };
   },
   mounted() {
@@ -189,76 +127,212 @@ export default {
 </script>
 
 <style scoped>
-.home-view {
-  animation: fadeIn 0.5s ease;
+.home-minimal {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.page-header {
+  margin-bottom: 2rem;
 }
 
-.welcome-section {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 30px;
-  border-radius: 10px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+.page-header h1 {
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: -0.02em;
 }
 
-.welcome-section h1 {
-  color: white !important;
+.page-header p {
+  color: #666;
+  font-size: 0.9375rem;
+  margin: 0;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 .stat-card {
-  padding: 25px;
-  border-radius: 10px;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  border-radius: 12px;
+  padding: 1.5rem;
   display: flex;
   align-items: center;
-  transition: all 0.3s ease;
-  cursor: pointer;
+  gap: 1rem;
+  transition: all 0.3s;
 }
 
 .stat-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  border-color: #00ff88;
+  transform: translateY(-2px);
 }
 
 .stat-icon {
-  font-size: 3rem;
-  margin-right: 20px;
-  opacity: 0.8;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
 }
 
-.stat-content h3 {
-  font-size: 2rem;
-  font-weight: bold;
+.stat-icon.products {
+  background: rgba(0, 255, 136, 0.1);
+  color: #00ff88;
+}
+
+.stat-icon.categories {
+  background: rgba(255, 193, 7, 0.1);
+  color: #ffc107;
+}
+
+.stat-icon.clients {
+  background: rgba(33, 150, 243, 0.1);
+  color: #2196f3;
+}
+
+.stat-icon.revenue {
+  background: rgba(156, 39, 176, 0.1);
+  color: #9c27b0;
+}
+
+.stat-info h3 {
+  color: #fff;
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem 0;
+}
+
+.stat-info p {
+  color: #666;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
 }
 
 .card {
-  border: none;
-  border-radius: 10px;
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  border-radius: 12px;
   overflow: hidden;
 }
 
 .card-header {
-  border-bottom: none;
-  padding: 15px 20px;
+  padding: 1.5rem;
+  border-bottom: 1px solid #1a1a1a;
 }
 
-.btn {
-  transition: all 0.3s ease;
+.card-header h2 {
+  color: #fff;
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
 }
 
-.btn:hover {
-  transform: translateX(5px);
+.card-body {
+  padding: 1rem;
+}
+
+.quick-action {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  color: #999;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.quick-action:hover {
+  background: #1a1a1a;
+  color: #fff;
+}
+
+.quick-action i:first-child {
+  font-size: 1.25rem;
+}
+
+.quick-action span {
+  flex: 1;
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.quick-action i:last-child {
+  font-size: 1rem;
+  opacity: 0.5;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+}
+
+.info-row:hover {
+  background: rgba(255,255,255,0.02);
+}
+
+.info-label {
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.info-value {
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.info-badge {
+  background: rgba(0, 255, 136, 0.1);
+  color: #00ff88;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.status-badge.active {
+  background: rgba(0, 255, 136, 0.1);
+  color: #00ff88;
+}
+
+@media (max-width: 768px) {
+  .home-minimal {
+    padding: 1.5rem;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
-

@@ -1,57 +1,49 @@
 <template>
-  <div class="login-container">
-    <div class="login-card">
-      <div class="login-header text-center mb-4">
-        <i class="bi bi-cpu display-1 text-primary mb-3"></i>
-        <h2 class="fw-bold">TechStore Pro</h2>
-        <p class="text-muted">Panel de Administración</p>
+  <div class="login-minimal">
+    <div class="login-container">
+      <div class="login-header">
+        <i class="bi bi-controller"></i>
+        <h1>GamerHub Pro</h1>
+        <p>Dashboard Administrativo</p>
       </div>
 
-      <!-- Alerta de error -->
-      <div v-if="error" class="alert alert-danger alert-dismissible fade show" role="alert">
-        <i class="bi bi-exclamation-triangle me-2"></i>
-        {{ error }}
-        <button type="button" class="btn-close" @click="error = null"></button>
+      <div v-if="error" class="alert-error">
+        <i class="bi bi-exclamation-circle"></i>
+        <span>{{ error }}</span>
       </div>
 
-      <!-- Alerta informativa -->
-      <div class="alert alert-info" role="alert">
-        <i class="bi bi-info-circle me-2"></i>
-        <strong>Usuarios de prueba:</strong><br>
-        <small>admin / admin123 | vendedor / vendedor123 | demo / demo123</small>
+      <div class="info-badge">
+        <i class="bi bi-info-circle"></i>
+        <div>
+          <strong>Demo:</strong> admin / admin123
+        </div>
       </div>
 
-      <form @submit.prevent="handleLogin">
-        <div class="mb-3">
-          <label for="username" class="form-label">
-            <i class="bi bi-person me-2"></i>Usuario
-          </label>
+      <form @submit.prevent="handleLogin" class="login-form">
+        <div class="form-group">
+          <label>Usuario</label>
           <input
             type="text"
-            class="form-control form-control-lg"
-            id="username"
             v-model="credentials.username"
-            placeholder="Ingrese su usuario"
+            placeholder="Ingresa tu usuario"
             required
+            autocomplete="username"
           >
         </div>
 
-        <div class="mb-4">
-          <label for="password" class="form-label">
-            <i class="bi bi-lock me-2"></i>Contraseña
-          </label>
-          <div class="input-group">
+        <div class="form-group">
+          <label>Contraseña</label>
+          <div class="password-input">
             <input
               :type="showPassword ? 'text' : 'password'"
-              class="form-control form-control-lg"
-              id="password"
               v-model="credentials.password"
-              placeholder="Ingrese su contraseña"
+              placeholder="Ingresa tu contraseña"
               required
+              autocomplete="current-password"
             >
             <button 
-              class="btn btn-outline-secondary" 
-              type="button"
+              type="button" 
+              class="toggle-password"
               @click="showPassword = !showPassword"
             >
               <i class="bi" :class="showPassword ? 'bi-eye-slash' : 'bi-eye'"></i>
@@ -61,38 +53,23 @@
 
         <button 
           type="submit" 
-          class="btn btn-primary btn-lg w-100 mb-3"
+          class="btn-login"
           :disabled="loading"
         >
           <span v-if="loading">
-            <span class="spinner-border spinner-border-sm me-2"></span>
-            Iniciando sesión...
+            <span class="spinner"></span>
+            Ingresando...
           </span>
           <span v-else>
-            <i class="bi bi-box-arrow-in-right me-2"></i>
             Iniciar Sesión
           </span>
         </button>
-
-        <div class="text-center">
-          <a href="#" class="text-decoration-none">¿Olvidaste tu contraseña?</a>
-        </div>
       </form>
 
-      <div class="login-footer mt-4 pt-3 border-top">
-        <p class="text-center text-muted small mb-0">
-          <i class="bi bi-shield-check me-1"></i>
-          Sistema de autenticación educativo
-        </p>
+      <div class="login-footer">
+        <i class="bi bi-shield-check"></i>
+        <span>Sistema educativo - No usar en producción</span>
       </div>
-    </div>
-
-    <div class="login-info mt-4 text-center text-white">
-      <p class="mb-0">
-        <i class="bi bi-info-circle me-2"></i>
-        <strong>Nota:</strong> Esta es una implementación educativa de un sistema de login.
-        En producción se debe usar autenticación segura con backend y tokens JWT.
-      </p>
     </div>
   </div>
 </template>
@@ -114,7 +91,6 @@ export default {
     };
   },
   mounted() {
-    // Si ya está autenticado, redirigir al dashboard
     if (authService.isAuthenticated()) {
       this.$router.push('/dashboard');
     }
@@ -124,8 +100,7 @@ export default {
       this.error = null;
       this.loading = true;
 
-      // Simular delay de red
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise(resolve => setTimeout(resolve, 600));
 
       const user = authService.login(
         this.credentials.username,
@@ -135,7 +110,7 @@ export default {
       if (user) {
         this.$router.push('/dashboard');
       } else {
-        this.error = 'Usuario o contraseña incorrectos. Por favor, intente nuevamente.';
+        this.error = 'Usuario o contraseña incorrectos';
         this.credentials.password = '';
       }
 
@@ -146,84 +121,203 @@ export default {
 </script>
 
 <style scoped>
-.login-container {
+.login-minimal {
   min-height: 100vh;
+  background: #000000;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
+  padding: 2rem;
 }
 
-.login-card {
-  background: white;
-  border-radius: 15px;
-  padding: 40px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+.login-container {
   width: 100%;
-  max-width: 450px;
-  animation: slideIn 0.5s ease;
+  max-width: 400px;
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.login-header {
+  text-align: center;
+  margin-bottom: 2rem;
 }
 
 .login-header i {
-  color: #0d6efd;
-  animation: pulse 2s infinite;
+  font-size: 3rem;
+  color: #00ff88;
+  margin-bottom: 1rem;
 }
 
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
+.login-header h1 {
+  color: #fff;
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: -0.02em;
 }
 
-.form-control:focus {
-  border-color: #0d6efd;
-  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+.login-header p {
+  color: #666;
+  font-size: 0.9375rem;
+  margin: 0;
 }
 
-.btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+.alert-error {
+  background: rgba(220, 53, 69, 0.1);
+  border: 1px solid #dc3545;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #ff6b6b;
+  font-size: 0.875rem;
+}
+
+.alert-error i {
+  font-size: 1.125rem;
+}
+
+.info-badge {
+  background: rgba(0, 255, 136, 0.05);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #00ff88;
+  font-size: 0.875rem;
+}
+
+.info-badge i {
+  font-size: 1.125rem;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  color: #999;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.form-group input {
+  background: #0a0a0a;
+  border: 1px solid #1a1a1a;
+  border-radius: 8px;
+  padding: 0.875rem 1rem;
+  color: #fff;
+  font-size: 0.9375rem;
+  transition: all 0.2s;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #00ff88;
+  background: #000;
+}
+
+.form-group input::placeholder {
+  color: #555;
+}
+
+.password-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-input input {
+  flex: 1;
+  padding-right: 3rem;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 0.75rem;
+  background: transparent;
   border: none;
-  transition: all 0.3s ease;
+  color: #666;
+  cursor: pointer;
+  padding: 0.5rem;
+  transition: color 0.2s;
 }
 
-.btn-primary:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+.toggle-password:hover {
+  color: #00ff88;
 }
 
-.btn-primary:disabled {
-  opacity: 0.7;
+.btn-login {
+  background: #00ff88;
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  padding: 0.875rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 0.5rem;
+}
+
+.btn-login:hover:not(:disabled) {
+  background: #00e67a;
+  transform: translateY(-1px);
+}
+
+.btn-login:disabled {
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
-.login-info {
-  max-width: 600px;
-  background: rgba(255,255,255,0.1);
-  padding: 15px;
-  border-radius: 10px;
-  backdrop-filter: blur(10px);
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(0,0,0,0.2);
+  border-top-color: #000;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-right: 0.5rem;
 }
 
-@media (max-width: 576px) {
-  .login-card {
-    padding: 30px 20px;
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.login-footer {
+  margin-top: 2rem;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: #555;
+  font-size: 0.8125rem;
+}
+
+.login-footer i {
+  font-size: 1rem;
+}
+
+@media (max-width: 480px) {
+  .login-minimal {
+    padding: 1.5rem;
+  }
+  
+  .login-header h1 {
+    font-size: 1.5rem;
   }
 }
 </style>
-
