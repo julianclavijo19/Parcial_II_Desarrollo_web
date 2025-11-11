@@ -11,6 +11,7 @@
 // 5. La función estará disponible en:
 //    https://[tu-proyecto].supabase.co/functions/v1/delete-user
 //
+// NOTA: Este archivo es solo referencia. El código se ejecuta en Supabase Edge Functions (Deno)
 // ============================================
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"

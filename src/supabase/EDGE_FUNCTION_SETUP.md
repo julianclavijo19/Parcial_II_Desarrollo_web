@@ -30,10 +30,12 @@ supabase functions new delete-user
 
 ### 4. Copiar el código
 
-Copia el contenido del archivo `edge-function-delete-user.ts` en:
+Copia el contenido del archivo `edge-function-delete-user.code` en:
 ```
 supabase/functions/delete-user/index.ts
 ```
+
+**NOTA**: El archivo `.code` es solo referencia. El código se ejecuta en Supabase Edge Functions (Deno), no en este proyecto Vue.
 
 ### 5. Configurar variables de entorno
 
