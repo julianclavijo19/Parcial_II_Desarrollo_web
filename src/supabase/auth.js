@@ -378,10 +378,40 @@ class SupabaseAuthService {
    */
   async isAuthenticated() {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      return session !== null;
+      // Verificar que Supabase esté configurado
+      if (!isSupabaseConfigured()) {
+        console.warn('⚠️ Supabase no está configurado en isAuthenticated()');
+        return false;
+      }
+
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      // Si hay error, retornar false
+      if (sessionError) {
+        console.warn('⚠️ Error al obtener sesión:', sessionError);
+        return false;
+      }
+      
+      // Si no hay sesión o no hay usuario, retornar false
+      if (!session || !session.user) {
+        console.log('ℹ️ No hay sesión activa en isAuthenticated()');
+        // Limpiar localStorage si no hay sesión
+        localStorage.removeItem('currentUser');
+        return false;
+      }
+      
+      // Verificar que la sesión no haya expirado (si tiene expires_at)
+      if (session.expires_at && session.expires_at < Date.now() / 1000) {
+        console.warn('⚠️ Sesión expirada');
+        // Limpiar localStorage si la sesión expiró
+        localStorage.removeItem('currentUser');
+        return false;
+      }
+      
+      console.log('✅ Sesión activa encontrada en isAuthenticated():', session.user.email);
+      return true;
     } catch (error) {
-      console.error('Error al verificar autenticación:', error);
+      console.error('❌ Error al verificar autenticación:', error);
       return false;
     }
   }
