@@ -547,31 +547,65 @@ class UserService {
       // IMPORTANTE: Necesitamos que haya un trigger en Supabase que elimine de auth.users
       // cuando se elimine de la tabla users, o usar una función Edge Function
       console.log('🔄 Eliminando usuario de la tabla users...');
-      const { error: deleteError } = await supabase
+      console.log('🔍 Usuario ID a eliminar:', userId);
+      console.log('🔍 Sesión activa del administrador:', session.user.id);
+      
+      // Agregar timeout a la consulta DELETE
+      const deleteQuery = supabase
         .from('users')
         .delete()
         .eq('id', userId);
+      
+      // Crear una promesa con timeout
+      const deletePromise = deleteQuery;
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Timeout: La consulta DELETE tardó más de 8 segundos')), 8000);
+      });
+      
+      let deleteResult;
+      try {
+        deleteResult = await Promise.race([deletePromise, timeoutPromise]);
+      } catch (raceError) {
+        if (raceError.message && raceError.message.includes('Timeout')) {
+          console.error('❌ Timeout al eliminar usuario:', raceError);
+          throw new Error('La eliminación tardó demasiado tiempo. Esto puede deberse a problemas de conexión o permisos. Por favor, verifica tu conexión a internet y las políticas RLS en Supabase.');
+        }
+        throw raceError;
+      }
+      
+      const { data: deleteData, error: deleteError } = deleteResult;
 
       if (deleteError) {
         console.error('❌ Error al eliminar usuario de la tabla users:', deleteError);
+        console.error('   Código de error:', deleteError.code);
+        console.error('   Mensaje:', deleteError.message);
+        console.error('   Detalles:', deleteError.details);
+        console.error('   Hint:', deleteError.hint);
         
         // Proporcionar mensajes de error más específicos
         if (deleteError.code === 'PGRST301' || deleteError.message.includes('permission denied')) {
-          throw new Error('No tienes permisos para eliminar usuarios. Verifica que tengas el rol de administrador.');
+          throw new Error('No tienes permisos para eliminar usuarios. Verifica que tengas el rol de administrador en Supabase.');
         } else if (deleteError.code === 'PGRST116') {
-          throw new Error('Usuario no encontrado en la base de datos');
-        } else if (deleteError.message.includes('RLS')) {
-          throw new Error('Error de permisos RLS. Verifica que las políticas RLS estén configuradas correctamente en Supabase.');
+          throw new Error('Usuario no encontrado en la base de datos. Puede que ya haya sido eliminado.');
+        } else if (deleteError.message.includes('RLS') || deleteError.message.includes('row-level security')) {
+          throw new Error('Error de permisos RLS. Ejecuta el script fix-rls-definitive.sql en el SQL Editor de Supabase para corregir las políticas RLS.');
         } else if (deleteError.message.includes('foreign key') || deleteError.message.includes('constraint')) {
           throw new Error('No se puede eliminar el usuario porque tiene datos relacionados en otras tablas.');
         } else if (deleteError.message.includes('violates row-level security')) {
-          throw new Error('Error de permisos. Verifica que tengas el rol de administrador y que las políticas RLS permitan la eliminación.');
+          throw new Error('Error de permisos. Verifica que tengas el rol de administrador y que las políticas RLS permitan la eliminación. Ejecuta fix-rls-definitive.sql en Supabase.');
+        } else if (deleteError.code === 'PGRST204' || deleteError.message.includes('No rows')) {
+          // Esto significa que el usuario ya no existe (puede que ya haya sido eliminado)
+          console.warn('⚠️ El usuario no existe (puede que ya haya sido eliminado)');
+          // No lanzar error, considerar que la eliminación fue exitosa
+          console.log('✅ Usuario ya no existe en la base de datos (considerado como eliminado)');
+          return;
         }
         
         throw new Error(`Error al eliminar usuario: ${deleteError.message}`);
       }
 
       console.log('✅ Usuario eliminado de la tabla users:', userId);
+      console.log('📊 Resultado de eliminación:', deleteData);
       
       // IMPORTANTE: Para eliminar completamente de auth.users, necesitarías:
       // 1. Una función Edge Function en Supabase que use el Admin API
