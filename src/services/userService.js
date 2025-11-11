@@ -676,52 +676,75 @@ class UserService {
       console.log('✅ Usuario eliminado de la tabla users:', userId);
       console.log('📊 Resultado de eliminación:', deleteData);
       
-      // Intentar eliminar de auth.users usando una Edge Function si está disponible
-      // Si no está disponible, el usuario quedará en auth.users pero no podrá iniciar sesión
-      // porque las políticas RLS verifican que exista en public.users
+      // CRÍTICO: Eliminar de auth.users usando la Edge Function
+      // Esto es necesario para eliminar completamente el usuario
       try {
         const supabaseUrl = SUPABASE_CONFIG.url;
         if (supabaseUrl && supabaseUrl.includes('supabase.co')) {
           const functionUrl = `${supabaseUrl}/functions/v1/delete-user`;
           
           // Obtener el token de acceso del administrador
-          const { data: { session: adminSession } } = await supabase.auth.getSession();
+          const { data: { session: adminSession }, error: sessionError } = await supabase.auth.getSession();
           
-          if (adminSession && adminSession.access_token) {
-            console.log('🔄 Intentando eliminar usuario de auth.users mediante Edge Function...');
+          if (sessionError) {
+            console.error('❌ Error al obtener sesión para Edge Function:', sessionError);
+            throw new Error('No se pudo obtener la sesión del administrador para eliminar de auth.users');
+          }
+          
+          if (!adminSession || !adminSession.access_token) {
+            console.error('❌ No hay sesión activa para llamar a la Edge Function');
+            throw new Error('No hay sesión activa. Por favor, inicia sesión nuevamente.');
+          }
+          
+          console.log('🔄 Llamando a Edge Function para eliminar de auth.users...');
+          console.log('   URL:', functionUrl);
+          console.log('   UserId:', userId);
+          
+          // Llamar a la Edge Function con timeout
+          const deleteAuthPromise = fetch(functionUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${adminSession.access_token}`,
+              'Content-Type': 'application/json',
+              'apikey': SUPABASE_CONFIG.anonKey
+            },
+            body: JSON.stringify({ userId: userId })
+          });
+          
+          const deleteAuthTimeout = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Timeout: La Edge Function tardó demasiado')), 10000);
+          });
+          
+          try {
+            const deleteAuthResponse = await Promise.race([deleteAuthPromise, deleteAuthTimeout]);
             
-            try {
-              const deleteAuthResponse = await fetch(functionUrl, {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${adminSession.access_token}`,
-                  'Content-Type': 'application/json',
-                  'apikey': SUPABASE_CONFIG.anonKey
-                },
-                body: JSON.stringify({ userId: userId })
-              });
-              
-              if (deleteAuthResponse.ok) {
-                const result = await deleteAuthResponse.json();
-                console.log('✅ Usuario eliminado de auth.users:', result);
-              } else {
-                // Si la función no existe o falla, es normal - el usuario ya no puede iniciar sesión
-                console.warn('⚠️ No se pudo eliminar de auth.users (esto es normal si la Edge Function no está configurada)');
-                console.warn('   El usuario no podrá iniciar sesión porque no existe en public.users');
-              }
-            } catch (functionError) {
-              // Si la función no existe, es normal
-              console.warn('⚠️ Edge Function no disponible (esto es normal):', functionError.message);
-              console.warn('   El usuario no podrá iniciar sesión porque no existe en public.users');
-              console.warn('   Para eliminación completa, crea la Edge Function delete-user en Supabase');
+            if (!deleteAuthResponse.ok) {
+              const errorData = await deleteAuthResponse.json().catch(() => ({ error: 'Error desconocido' }));
+              console.error('❌ Error en Edge Function:', errorData);
+              throw new Error(`Error al eliminar de auth.users: ${errorData.error || deleteAuthResponse.statusText}`);
+            }
+            
+            const result = await deleteAuthResponse.json();
+            console.log('✅ Usuario eliminado de auth.users exitosamente:', result);
+          } catch (functionError) {
+            console.error('❌ Error al llamar a la Edge Function:', functionError);
+            
+            if (functionError.message && functionError.message.includes('Timeout')) {
+              throw new Error('La eliminación de auth.users tardó demasiado tiempo. El usuario fue eliminado de public.users pero puede quedar en auth.users. Verifica manualmente en Supabase Dashboard.');
+            } else if (functionError.message && functionError.message.includes('Failed to fetch')) {
+              throw new Error('No se pudo conectar con la Edge Function. Verifica que la función esté desplegada en Supabase.');
+            } else {
+              throw new Error(`Error al eliminar de auth.users: ${functionError.message || 'Error desconocido'}`);
             }
           }
+        } else {
+          console.warn('⚠️ URL de Supabase no válida, no se puede llamar a la Edge Function');
+          throw new Error('URL de Supabase no configurada correctamente');
         }
       } catch (authDeleteError) {
-        // Si hay error al intentar eliminar de auth.users, no es crítico
-        // El usuario ya no puede iniciar sesión porque no existe en public.users
-        console.warn('⚠️ No se pudo eliminar de auth.users (no crítico):', authDeleteError.message);
-        console.warn('   El usuario no podrá iniciar sesión porque no existe en public.users');
+        console.error('❌ Error crítico al eliminar de auth.users:', authDeleteError);
+        // Lanzar el error para que el usuario sepa que algo falló
+        throw new Error(`Error al eliminar usuario completamente: ${authDeleteError.message}. El usuario fue eliminado de public.users pero puede quedar en auth.users.`);
       }
 
       return;

@@ -431,19 +431,32 @@ export default {
         await new Promise(resolve => setTimeout(resolve, 500));
         await this.loadUsers();
         
-        // Verificar que el nuevo usuario está en la lista
-        const newUserInList = this.users.find(u => 
-          u.id === newUser.id || 
-          (u.email && newUser.email && u.email.toLowerCase() === newUser.email.toLowerCase())
-        );
+        // Verificar que el nuevo usuario está en la lista (con múltiples intentos)
+        let newUserInList = null;
+        let attempts = 0;
+        const maxAttempts = 5;
+        
+        while (!newUserInList && attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          await this.loadUsers();
+          
+          newUserInList = this.users.find(u => 
+            u.id === newUser.id || 
+            (u.email && newUser.email && u.email.toLowerCase() === newUser.email.toLowerCase())
+          );
+          
+          if (newUserInList) {
+            console.log('✅ Nuevo usuario encontrado en la lista (intento', attempts + 1, ')');
+            break;
+          }
+          
+          attempts++;
+          console.log('⚠️ Usuario no encontrado, intentando nuevamente... (intento', attempts, 'de', maxAttempts, ')');
+        }
         
         if (!newUserInList) {
-          console.warn('⚠️ El nuevo usuario no apareció en la lista inmediatamente, recargando nuevamente...');
-          // Esperar un poco más y recargar nuevamente
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          await this.loadUsers();
-        } else {
-          console.log('✅ Nuevo usuario encontrado en la lista');
+          console.warn('⚠️ El nuevo usuario no apareció después de', maxAttempts, 'intentos');
+          this.error = 'El usuario fue creado pero no aparece en la lista. Por favor, recarga la página.';
         }
         
         // Limpiar mensaje después de 5 segundos
