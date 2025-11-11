@@ -5,6 +5,7 @@
  */
 
 import { supabase } from './client.js';
+import { isSupabaseConfigured } from './config.js';
 
 class SupabaseAuthService {
   /**
@@ -15,6 +16,11 @@ class SupabaseAuthService {
    */
   async login(email, password) {
     try {
+      // Verificar que Supabase esté configurado
+      if (!isSupabaseConfigured()) {
+        throw new Error('Supabase no está configurado. Por favor, configura las variables de entorno.');
+      }
+
       // Validar email
       if (!email || !email.includes('@')) {
         throw new Error('Por favor, ingresa un correo electrónico válido');

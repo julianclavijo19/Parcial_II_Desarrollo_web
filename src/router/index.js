@@ -125,81 +125,94 @@ router.beforeEach(async (to, from, next) => {
     const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
     const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin);
 
-    // Actualizar título de la página
-    if (document && document.title !== undefined) {
-      document.title = `GamerHub Pro - ${to.meta.title || 'Dashboard'}`;
+    // Actualizar título de la página de forma segura
+    try {
+      if (typeof document !== 'undefined' && document.title !== undefined) {
+        document.title = `GamerHub Pro - ${to.meta.title || 'Dashboard'}`;
+      }
+    } catch (titleError) {
+      console.warn('Error al actualizar título:', titleError);
     }
 
-    // Si la ruta requiere autenticación, verificar de forma asíncrona
+    // Si la ruta requiere autenticación o admin
     if (requiresAuth || requiresAdmin) {
       try {
-        // Verificar autenticación de forma asíncrona con timeout
-        const authCheck = Promise.race([
-          authService.isAuthenticatedAsync(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
-        ]);
+        // Verificar autenticación con timeout
+        let isAuthenticated = false;
+        try {
+          isAuthenticated = await Promise.race([
+            authService.isAuthenticatedAsync().catch(() => false),
+            new Promise(resolve => setTimeout(() => resolve(false), 3000))
+          ]);
+        } catch (authError) {
+          console.warn('Error al verificar autenticación:', authError);
+          isAuthenticated = false;
+        }
         
-        const isAuthenticated = await authCheck;
-        
-        if (!isAuthenticated) {
-          // Redirigir al login si la ruta requiere autenticación y no está autenticado
-          if (requiresAuth) {
-            next('/login');
-            return;
-          }
+        if (!isAuthenticated && requiresAuth) {
+          console.log('Usuario no autenticado, redirigiendo a login');
+          next('/login');
+          return;
         }
 
         // Si la ruta requiere admin, verificar el rol
-        if (requiresAdmin) {
+        if (requiresAdmin && isAuthenticated) {
           try {
             const currentUser = await Promise.race([
-              authService.getCurrentUserAsync(),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+              authService.getCurrentUserAsync().catch(() => null),
+              new Promise(resolve => setTimeout(() => resolve(null), 3000))
             ]) || authService.getCurrentUser();
             
             if (!currentUser || currentUser.rol !== 'admin') {
-              // Redirigir al dashboard si la ruta requiere admin y el usuario no es admin
               console.warn('Acceso denegado: Se requiere rol de administrador');
               next('/dashboard');
               return;
             }
           } catch (adminError) {
             console.error('Error al verificar rol de administrador:', adminError);
-            // En caso de error, permitir acceso pero el componente verificará nuevamente
-            next();
+            // En caso de error, redirigir al dashboard
+            next('/dashboard');
             return;
           }
         }
       } catch (error) {
         console.error('Error en el guard de navegación:', error);
-        // En caso de error, redirigir al login solo si requiere auth
-        if (requiresAuth && !to.path.includes('/login')) {
+        // En caso de error, redirigir al login si requiere auth
+        if (requiresAuth) {
           next('/login');
           return;
         }
-        // Si no requiere auth, permitir el acceso
-        next();
-        return;
       }
     }
 
-  // Si intenta ir al login y ya está autenticado, redirigir al dashboard
-  if (to.path === '/login') {
-    try {
-      const isAuthenticated = await authService.isAuthenticatedAsync();
-      if (isAuthenticated) {
-        next('/dashboard');
-        return;
+    // Si intenta ir al login y ya está autenticado, redirigir al dashboard
+    if (to.path === '/login') {
+      try {
+        const isAuthenticated = await Promise.race([
+          authService.isAuthenticatedAsync().catch(() => false),
+          new Promise(resolve => setTimeout(() => resolve(false), 2000))
+        ]);
+        if (isAuthenticated) {
+          next('/dashboard');
+          return;
+        }
+      } catch (error) {
+        // Si hay error, permitir acceso al login
+        console.warn('Error al verificar autenticación en login:', error);
       }
-    } catch (error) {
-      // Si hay error, permitir acceso al login
-      console.error('Error al verificar autenticación:', error);
+    }
+
+    // Permitir navegación
+    next();
+  } catch (error) {
+    console.error('Error crítico en el router:', error);
+    // En caso de error crítico, redirigir al login
+    if (to.path !== '/login') {
+      next('/login');
+    } else {
+      next();
     }
   }
-
-  // Permitir navegación
-  next();
 });
 
 export default router;
-
