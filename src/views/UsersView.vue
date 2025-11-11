@@ -411,52 +411,39 @@ export default {
 
       try {
         console.log('🔄 Creando usuario:', this.formData.email);
-        const newUser = await userService.createUser(this.formData);
+        
+        // Agregar timeout para evitar que se quede cargando indefinidamente
+        const createPromise = userService.createUser(this.formData);
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Timeout: La creación del usuario tardó demasiado tiempo')), 15000);
+        });
+        
+        const newUser = await Promise.race([createPromise, timeoutPromise]);
         console.log('✅ Usuario creado:', newUser);
         
         this.successMessage = `Usuario "${newUser.nombre || newUser.email}" creado exitosamente`;
+        
+        // Cerrar el modal antes de recargar
         this.closeModal();
         
-        // Esperar un momento para que la sesión se restaure y el usuario se cree completamente
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Verificar que la sesión del administrador sigue activa
-        try {
-          const updatedUser = await authService.getCurrentUserAsync();
-          if (updatedUser) {
-            // Si el usuario cambió y ya no es admin, mostrar error
-            if (updatedUser.id !== this.currentUser?.id && updatedUser.rol !== 'admin') {
-              this.error = 'La sesión cambió. Por favor, recarga la página.';
-              this.successMessage = null;
-              setTimeout(() => {
-                window.location.reload();
-              }, 2000);
-              return;
-            }
-            // Actualizar el usuario actual
-            this.currentUser = updatedUser;
-          }
-        } catch (sessionError) {
-          console.error('Error al verificar sesión:', sessionError);
-          // Continuar de todas formas - el usuario fue creado
-        }
-        
-        // Recargar la lista de usuarios
+        // Recargar la lista de usuarios después de un breve delay
         console.log('🔄 Recargando lista de usuarios...');
+        await new Promise(resolve => setTimeout(resolve, 500));
         await this.loadUsers();
         
         // Verificar que el nuevo usuario está en la lista
         const newUserInList = this.users.find(u => 
           u.id === newUser.id || 
-          u.email === newUser.email ||
           (u.email && newUser.email && u.email.toLowerCase() === newUser.email.toLowerCase())
         );
         
         if (!newUserInList) {
-          console.warn('⚠️ El nuevo usuario no apareció en la lista inmediatamente');
+          console.warn('⚠️ El nuevo usuario no apareció en la lista inmediatamente, recargando nuevamente...');
           // Esperar un poco más y recargar nuevamente
           await new Promise(resolve => setTimeout(resolve, 1000));
           await this.loadUsers();
+        } else {
+          console.log('✅ Nuevo usuario encontrado en la lista');
         }
         
         // Limpiar mensaje después de 5 segundos
@@ -465,13 +452,36 @@ export default {
         }, 5000);
       } catch (error) {
         console.error('❌ Error al crear usuario:', error);
-        this.error = error.message || 'Error al crear usuario';
         
-        // Mantener el modal abierto para que el usuario pueda corregir los errores
-        // No cerrar el modal en caso de error
+        // Proporcionar mensajes de error más específicos
+        let errorMessage = error.message || 'Error al crear usuario';
+        
+        if (error.message && error.message.includes('Timeout')) {
+          errorMessage = 'La creación del usuario tardó demasiado tiempo. El usuario puede haber sido creado. Por favor, recarga la página para verificar.';
+          // Cerrar el modal y recargar la lista
+          this.closeModal();
+          await this.loadUsers();
+        } else if (error.message && error.message.includes('Ya existe')) {
+          errorMessage = error.message;
+        } else if (error.message && error.message.includes('permisos')) {
+          errorMessage = error.message + '\n\nVerifica que tengas el rol de administrador y que las políticas RLS estén configuradas correctamente.';
+        } else if (error.message && error.message.includes('RLS')) {
+          errorMessage = error.message + '\n\nEjecuta el script fix-rls-definitive.sql en el SQL Editor de Supabase para corregir las políticas RLS.';
+        }
+        
+        this.error = errorMessage;
+        
+        // Mantener el modal abierto solo si no es un error de timeout
+        if (!error.message || !error.message.includes('Timeout')) {
+          // Mantener el modal abierto para que el usuario pueda corregir los errores
+        } else {
+          // Cerrar el modal si es timeout (puede que el usuario haya sido creado)
+          this.closeModal();
+        }
       } finally {
         // Asegurar que el loading se detenga siempre
         this.loading = false;
+        console.log('✅ Loading detenido en createUser');
       }
     },
 

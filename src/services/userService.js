@@ -151,43 +151,86 @@ class UserService {
       const userId = signUpData.user.id;
       console.log('✅ Usuario creado en Supabase Auth:', userId);
 
+      // Restaurar la sesión del administrador ANTES de crear el registro en users
+      // Esto es crítico para que las políticas RLS funcionen correctamente
+      console.log('🔄 Restaurando sesión del administrador antes de crear registro en users...');
+      const { error: restoreErrorBefore } = await supabase.auth.setSession({
+        access_token: currentUserAccessToken,
+        refresh_token: currentUserRefreshToken
+      });
+
+      if (restoreErrorBefore) {
+        console.warn('⚠️ Error al restaurar sesión antes de crear registro:', restoreErrorBefore);
+        // Intentar método alternativo
+        try {
+          await supabase.auth.signOut();
+          await new Promise(resolve => setTimeout(resolve, 200));
+          await supabase.auth.setSession({
+            access_token: currentUserAccessToken,
+            refresh_token: currentUserRefreshToken
+          });
+        } catch (altError) {
+          console.error('❌ Error en método alternativo de restauración:', altError);
+        }
+      } else {
+        console.log('✅ Sesión restaurada correctamente');
+      }
+
       // Esperar un momento para que el trigger cree el registro en la tabla users
       // Los triggers pueden tomar tiempo, especialmente en Supabase
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       // Verificar si el usuario fue creado en la tabla users por el trigger
+      // Usar timeout para evitar que se quede colgado
       let userRecord = null;
-      let attempts = 0;
-      const maxAttempts = 10; // Aumentar intentos para dar más tiempo al trigger
+      const maxWaitTime = 5000; // 5 segundos máximo de espera
+      const checkInterval = 500; // Verificar cada 500ms
+      const startTime = Date.now();
 
       console.log('🔍 Buscando usuario en la tabla users...');
-      while (!userRecord && attempts < maxAttempts) {
-        const { data: existingUser, error: fetchError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
+      
+      while (!userRecord && (Date.now() - startTime) < maxWaitTime) {
+        try {
+          const fetchPromise = supabase
+            .from('users')
+            .select('*')
+            .eq('id', userId)
+            .maybeSingle();
+          
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Timeout')), 3000);
+          });
+          
+          const { data: existingUser, error: fetchError } = await Promise.race([
+            fetchPromise,
+            timeoutPromise
+          ]);
 
-        if (existingUser && !fetchError) {
-          userRecord = existingUser;
-          console.log('✅ Usuario encontrado en la tabla users (intento', attempts + 1, ')');
-          break;
-        }
+          if (existingUser && !fetchError) {
+            userRecord = existingUser;
+            console.log('✅ Usuario encontrado en la tabla users');
+            break;
+          }
 
-        if (fetchError && fetchError.code !== 'PGRST116') {
-          // Si hay un error que no sea "no encontrado", loguearlo
-          console.warn('⚠️ Error al buscar usuario (intento', attempts + 1, '):', fetchError);
-        }
+          if (fetchError && fetchError.code !== 'PGRST116') {
+            // Si hay un error que no sea "no encontrado", loguearlo
+            console.warn('⚠️ Error al buscar usuario:', fetchError);
+          }
 
-        attempts++;
-        if (attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Esperar 1 segundo entre intentos
+          // Esperar antes del siguiente intento
+          await new Promise(resolve => setTimeout(resolve, checkInterval));
+        } catch (checkError) {
+          if (checkError.message === 'Timeout') {
+            console.warn('⚠️ Timeout al buscar usuario, continuando con creación manual...');
+            break;
+          }
+          console.warn('⚠️ Error en bucle de búsqueda:', checkError);
         }
       }
 
-      // Si el trigger no creó el usuario después de todos los intentos, crearlo manualmente
+      // Si el trigger no creó el usuario, crearlo manualmente
       if (!userRecord) {
-        console.warn('⚠️ El trigger no creó el usuario después de', maxAttempts, 'intentos. Creando manualmente...');
+        console.warn('⚠️ El trigger no creó el usuario. Creando manualmente...');
         
         const userToInsert = {
           id: userId,
@@ -199,113 +242,105 @@ class UserService {
         
         console.log('🔄 Insertando usuario manualmente:', userToInsert);
         
-        const { data: newUserRecord, error: insertError } = await supabase
+        // Agregar timeout a la inserción
+        const insertPromise = supabase
           .from('users')
           .insert([userToInsert])
           .select()
           .single();
+        
+        const insertTimeout = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Timeout: La inserción tardó demasiado')), 5000);
+        });
+        
+        try {
+          const { data: newUserRecord, error: insertError } = await Promise.race([
+            insertPromise,
+            insertTimeout
+          ]);
 
-        if (insertError) {
-          // Si ya existe (el trigger lo creó justo ahora), obtenerlo
-          if (insertError.code === '23505' || insertError.message.includes('duplicate')) {
-            console.log('✅ El usuario ya existe (creado por el trigger), obteniéndolo...');
-            const { data: existingUser, error: fetchError } = await supabase
-              .from('users')
-              .select('*')
-              .eq('id', userId)
-              .maybeSingle();
-            
-            if (existingUser && !fetchError) {
-              userRecord = existingUser;
-              console.log('✅ Usuario obtenido después de error de duplicado');
+          if (insertError) {
+            // Si ya existe (el trigger lo creó justo ahora), obtenerlo
+            if (insertError.code === '23505' || insertError.message.includes('duplicate')) {
+              console.log('✅ El usuario ya existe (creado por el trigger), obteniéndolo...');
+              const { data: existingUser, error: fetchError } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', userId)
+                .maybeSingle();
+              
+              if (existingUser && !fetchError) {
+                userRecord = existingUser;
+                console.log('✅ Usuario obtenido después de error de duplicado');
+              } else {
+                console.error('❌ Error al obtener usuario después de error de duplicado:', fetchError);
+                throw new Error(`Error al crear usuario en la tabla: ${insertError.message}`);
+              }
             } else {
-              console.error('❌ Error al obtener usuario después de error de duplicado:', fetchError);
+              console.error('❌ Error al insertar usuario manualmente:', insertError);
+              
+              // Proporcionar mensajes de error más específicos
+              if (insertError.code === 'PGRST301' || insertError.message.includes('permission denied')) {
+                throw new Error('No tienes permisos para crear usuarios. Verifica que tengas el rol de administrador.');
+              } else if (insertError.message.includes('RLS')) {
+                throw new Error('Error de permisos. Verifica que las políticas RLS estén configuradas correctamente.');
+              }
+              
               throw new Error(`Error al crear usuario en la tabla: ${insertError.message}`);
             }
           } else {
-            console.error('❌ Error al insertar usuario manualmente:', insertError);
-            
-            // Proporcionar mensajes de error más específicos
-            if (insertError.code === 'PGRST301' || insertError.message.includes('permission denied')) {
-              throw new Error('No tienes permisos para crear usuarios. Verifica que tengas el rol de administrador.');
-            } else if (insertError.message.includes('RLS')) {
-              throw new Error('Error de permisos. Verifica que las políticas RLS estén configuradas correctamente.');
-            }
-            
-            throw new Error(`Error al crear usuario en la tabla: ${insertError.message}`);
+            userRecord = newUserRecord;
+            console.log('✅ Usuario creado manualmente en la tabla users');
           }
-        } else {
-          userRecord = newUserRecord;
-          console.log('✅ Usuario creado manualmente en la tabla users');
+        } catch (insertRaceError) {
+          if (insertRaceError.message && insertRaceError.message.includes('Timeout')) {
+            console.error('❌ Timeout al insertar usuario:', insertRaceError);
+            throw new Error('La creación del usuario tardó demasiado tiempo. Por favor, verifica tu conexión y las políticas RLS en Supabase.');
+          }
+          throw insertRaceError;
         }
       }
 
       // Actualizar el rol del usuario (el trigger puede haberlo creado con rol por defecto)
       if (userRecord.rol !== userData.rol) {
         console.log('🔄 Actualizando rol del usuario de', userRecord.rol, 'a', userData.rol);
-        const { data: updatedUser, error: updateError } = await supabase
+        
+        const updatePromise = supabase
           .from('users')
           .update({ rol: userData.rol })
           .eq('id', userId)
           .select()
           .single();
+        
+        const updateTimeout = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Timeout')), 5000);
+        });
+        
+        try {
+          const { data: updatedUser, error: updateError } = await Promise.race([
+            updatePromise,
+            updateTimeout
+          ]);
 
-        if (updateError) {
-          console.warn('⚠️ No se pudo actualizar el rol del usuario:', updateError);
-          // Continuar de todas formas, el usuario está creado
-          // Pero lanzar una advertencia al usuario
-          console.warn('El usuario fue creado pero el rol no se pudo actualizar. Rol actual:', userRecord.rol);
-        } else {
-          userRecord = updatedUser;
-          console.log('✅ Rol del usuario actualizado correctamente');
+          if (updateError) {
+            console.warn('⚠️ No se pudo actualizar el rol del usuario:', updateError);
+            // Continuar de todas formas, el usuario está creado
+            // Pero lanzar una advertencia al usuario
+            console.warn('El usuario fue creado pero el rol no se pudo actualizar. Rol actual:', userRecord.rol);
+          } else {
+            userRecord = updatedUser;
+            console.log('✅ Rol del usuario actualizado correctamente');
+          }
+        } catch (updateRaceError) {
+          if (updateRaceError.message && updateRaceError.message.includes('Timeout')) {
+            console.warn('⚠️ Timeout al actualizar rol, continuando con rol actual:', userRecord.rol);
+          } else {
+            console.warn('⚠️ Error al actualizar rol:', updateRaceError);
+          }
         }
       }
 
       console.log('✅ Usuario creado exitosamente:', userRecord);
-
-      // CRÍTICO: Restaurar la sesión del administrador inmediatamente
-      // signUp() automáticamente inicia sesión con el nuevo usuario creado
-      // Necesitamos restaurar la sesión del administrador lo más rápido posible
-      console.log('🔄 Restaurando sesión del administrador...');
-      
-      // Restaurar la sesión inmediatamente sin esperar
-      const { error: restoreError } = await supabase.auth.setSession({
-        access_token: currentUserAccessToken,
-        refresh_token: currentUserRefreshToken
-      });
-
-      if (restoreError) {
-        console.error('❌ Error al restaurar sesión:', restoreError);
-        // Si falla setSession, intentar cerrar sesión y restaurar
-        try {
-          await supabase.auth.signOut();
-          await new Promise(resolve => setTimeout(resolve, 200));
-          
-          const { error: restoreError2 } = await supabase.auth.setSession({
-            access_token: currentUserAccessToken,
-            refresh_token: currentUserRefreshToken
-          });
-          
-          if (restoreError2) {
-            console.error('❌ Error al restaurar sesión (intento 2):', restoreError2);
-            // No lanzar error - el usuario fue creado exitosamente
-          } else {
-            console.log('✅ Sesión restaurada correctamente (método alternativo)');
-          }
-        } catch (altError) {
-          console.error('❌ Error en método alternativo:', altError);
-        }
-      } else {
-        console.log('✅ Sesión del administrador restaurada correctamente');
-      }
-      
-      // Verificar que la sesión se restauró correctamente
-      const { data: { session: verifySession } } = await supabase.auth.getSession();
-      if (verifySession && verifySession.user.id === currentUserId) {
-        console.log('✅ Verificación: Sesión del administrador confirmada');
-      } else {
-        console.warn('⚠️ Advertencia: La sesión puede no haberse restaurado correctamente');
-      }
 
       // Nota: El email del usuario se confirmará automáticamente si está configurado
       // en Supabase (auto-confirm habilitado). Si no, el usuario necesitará confirmar
@@ -606,32 +641,53 @@ class UserService {
       console.log('✅ Usuario eliminado de la tabla users:', userId);
       console.log('📊 Resultado de eliminación:', deleteData);
       
-      // IMPORTANTE: Para eliminar completamente de auth.users, necesitarías:
-      // 1. Una función Edge Function en Supabase que use el Admin API
-      // 2. O configurar un trigger en PostgreSQL que llame a una función que elimine de auth.users
-      // 3. O usar el servicio de administración de Supabase (requiere service_role key)
-      // 
-      // Por ahora, eliminamos solo de la tabla users. El usuario no podrá iniciar sesión
-      // porque no existe en la tabla users (las políticas RLS lo verifican).
-      // 
-      // Si necesitas eliminación completa, crea una función Edge Function en Supabase:
-      // 
-      // import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-      // import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-      // 
-      // serve(async (req) => {
-      //   const supabaseAdmin = createClient(
-      //     Deno.env.get('SUPABASE_URL') ?? '',
-      //     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-      //   )
-      //   
-      //   const { userId } = await req.json()
-      //   const { error } = await supabaseAdmin.auth.admin.deleteUser(userId)
-      //   
-      //   return new Response(JSON.stringify({ error }), {
-      //     headers: { 'Content-Type': 'application/json' }
-      //   })
-      // })
+      // Intentar eliminar de auth.users usando una Edge Function si está disponible
+      // Si no está disponible, el usuario quedará en auth.users pero no podrá iniciar sesión
+      // porque las políticas RLS verifican que exista en public.users
+      try {
+        const supabaseUrl = SUPABASE_CONFIG.url;
+        if (supabaseUrl && supabaseUrl.includes('supabase.co')) {
+          const functionUrl = `${supabaseUrl}/functions/v1/delete-user`;
+          
+          // Obtener el token de acceso del administrador
+          const { data: { session: adminSession } } = await supabase.auth.getSession();
+          
+          if (adminSession && adminSession.access_token) {
+            console.log('🔄 Intentando eliminar usuario de auth.users mediante Edge Function...');
+            
+            try {
+              const deleteAuthResponse = await fetch(functionUrl, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${adminSession.access_token}`,
+                  'Content-Type': 'application/json',
+                  'apikey': SUPABASE_CONFIG.anonKey
+                },
+                body: JSON.stringify({ userId: userId })
+              });
+              
+              if (deleteAuthResponse.ok) {
+                const result = await deleteAuthResponse.json();
+                console.log('✅ Usuario eliminado de auth.users:', result);
+              } else {
+                // Si la función no existe o falla, es normal - el usuario ya no puede iniciar sesión
+                console.warn('⚠️ No se pudo eliminar de auth.users (esto es normal si la Edge Function no está configurada)');
+                console.warn('   El usuario no podrá iniciar sesión porque no existe en public.users');
+              }
+            } catch (functionError) {
+              // Si la función no existe, es normal
+              console.warn('⚠️ Edge Function no disponible (esto es normal):', functionError.message);
+              console.warn('   El usuario no podrá iniciar sesión porque no existe en public.users');
+              console.warn('   Para eliminación completa, crea la Edge Function delete-user en Supabase');
+            }
+          }
+        }
+      } catch (authDeleteError) {
+        // Si hay error al intentar eliminar de auth.users, no es crítico
+        // El usuario ya no puede iniciar sesión porque no existe en public.users
+        console.warn('⚠️ No se pudo eliminar de auth.users (no crítico):', authDeleteError.message);
+        console.warn('   El usuario no podrá iniciar sesión porque no existe en public.users');
+      }
 
       return;
     } catch (error) {
