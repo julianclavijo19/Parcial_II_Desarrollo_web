@@ -30,12 +30,26 @@ supabase functions new delete-user
 
 ### 4. Copiar el código
 
-Copia el contenido del archivo `edge-function-delete-user.code` en:
-```
-supabase/functions/delete-user/index.ts
+**IMPORTANTE**: Copia SOLO el código limpio, sin comentarios.
+
+Abre el archivo `EDGE_FUNCTION_CODIGO_LIMPIO.txt` y copia SOLO el código entre las líneas `===`.
+
+**NO copies:**
+- Los comentarios de documentación
+- Las líneas con `===`
+- Cualquier texto fuera del bloque de código
+
+El código debe empezar con:
+```typescript
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 ```
 
-**NOTA**: El archivo `.code` es solo referencia. El código se ejecuta en Supabase Edge Functions (Deno), no en este proyecto Vue.
+Y terminar con:
+```typescript
+})
+```
+
+Pega el código en el editor de Supabase Edge Functions.
 
 ### 5. Configurar variables de entorno
 

@@ -1,3 +1,10 @@
+IMPORTANTE: Copia SOLO este código (sin comentarios) en Supabase Edge Functions
+
+============================================
+CÓDIGO PARA SUPABASE EDGE FUNCTION
+Nombre de la función: delete-user
+============================================
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -78,3 +85,20 @@ serve(async (req) => {
     )
   }
 })
+
+============================================
+INSTRUCCIONES:
+============================================
+
+1. Ve a Supabase Dashboard > Edge Functions
+2. Crea una nueva función llamada "delete-user"
+3. BORRA todo el código que viene por defecto
+4. Copia SOLO el código de arriba (entre las líneas de ===)
+5. NO copies los comentarios ni las líneas de ===
+6. Configura las variables de entorno:
+   - SUPABASE_URL: https://cettyprzybivywqakeym.supabase.co
+   - SUPABASE_SERVICE_ROLE_KEY: Tu service_role key (encuéntrala en Settings > API)
+7. Despliega la función
+
+============================================
+
